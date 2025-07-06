@@ -1,0 +1,413 @@
+
+local players = game:GetService("Players")
+local uis = game:GetService("UserInputService")
+local runservice = game:GetService("RunService")
+local tweenservice = game:GetService("TweenService")
+local marketplaceservice = game:GetService("MarketplaceService")
+local textservice = game:GetService("TextService")
+local coregui = game:GetService("CoreGui")
+local httpservice = game:GetService("HttpService")
+
+local player = players.LocalPlayer
+local mouse = player:GetMouse()
+local camera = game.Workspace.CurrentCamera
+local AZURE_TmKALRSX = player
+local Position
+local Rawtable = getrawmetatable(game)
+setreadonly(Rawtable, false)
+local Indexx = Rawtable.__index
+
+
+local Resolvers = {
+    Options = {
+        Velocity = false,
+        HumanoidRedirection = false,
+        VelocityRecalculation = false -- done
+    }
+}
+
+local target_aim = {
+    Aiming = {
+        Target = {
+            Enabled = true,
+            Key = Enum.KeyCode.Q,
+            Prediction = 0.1433,
+            Radius = 35,
+            TargetPart = "HumanoidRootPart",
+            JumpOffset = nil,
+            LookAt = nil,
+            AntiGroundShot = nil,
+            HitPart = nil
+
+        }
+    }
+}
+
+
+
+
+local repo = 'https://raw.githubusercontent.com/violin-suzutsuki/LinoriaLib/main/'
+
+local Library = loadstring(game:HttpGet(repo .. 'Library.lua'))()
+local ThemeManager = loadstring(game:HttpGet('https://raw.githubusercontent.com/violin-suzutsuki/LinoriaLib/refs/heads/main/addons/ThemeManager.lua'))()--local ThemeManager = loadstring(game:HttpGet(repo .. 'addons/ThemeManager.lua'))()
+local SaveManager = loadstring(game:HttpGet(repo .. 'addons/SaveManager.lua'))()
+
+local Window = Library:CreateWindow({
+    Title = 'Azure free V3 (Info: This will be free for 1 month)',
+    Center = true,
+    AutoShow = true,
+    TabPadding = 0,
+    MenuFadeTime = 0.2
+})
+
+local Tabs = {  
+
+Rage = Window:AddTab('     Lock     '),
+['UI Settings'] = Window:AddTab('  UI Settings '),}
+
+
+-- [+] TargetAim
+
+local TabBox = Tabs.Rage:AddLeftTabbox()
+
+local Tab1 = TabBox:AddTab('[+] TargetAim')
+Tab1:AddToggle('MyToggle', {Text = 'Enable',Default = false,Tooltip = '[-] Enable it by a Simple Click', 
+Callback = function(Value)
+    target_aim.Aiming.Target.Enabled = Value
+    end})
+
+Tab1:AddLabel('Keybind'):AddKeyPicker('KeyPicker', {Default = 'Q',SyncToggleState = true,Mode = 'Toggle',Text = 'Keybind',NoUI = false,
+Callback = function(Value)
+    TargetAimEnabled = Value
+    if TargetAimEnabled then
+        AZURE_TmKALRSX = targetchosen()
+        if AZURE_TmKALRSX ~= nil then
+            local HEALTH = AZURE_TmKALRSX.Character.Humanoid.Health
+            conn1 = AZURE_TmKALRSX.Character.Humanoid.HealthChanged:Connect(function (NEWhealth)
+                local changedHealth = NEWhealth - HEALTH
+                local fixedHealth = string.gsub(changedHealth, "-", "")
+                if NEWhealth < HEALTH then
+                    local STRING = "%s was hit at distance %s with %s for %s in %s"
+                    local DISTANCE = (AZURE_TmKALRSX.Character.HumanoidRootPart.Position - player.Character.HumanoidRootPart.Position).Magnitude
+                    for i,v in pairs(player.Character:GetChildren()) do
+                        if v:IsA("Tool") then
+                            TOOLNAME = v.Name
+                        end
+                    end
+                    Library:Notify(string.format(STRING, AZURE_TmKALRSX.Character.Humanoid.DisplayName, math.round(DISTANCE / 1), TOOLNAME, math.round(fixedHealth / 1), target_aim.Aiming.Target.TargetPart))    
+                end
+                HEALTH = NEWhealth
+            end)
+        end
+    else
+        AZURE_TmKALRSX = nil
+        if conn1 then conn1:Disconnect() end
+    end
+end})
+
+
+Tab1:AddDropdown('MyDropdown', {Values = { 'HumanoidRootPart', 'UpperTorso', 'Head', 'LowerTorso' },Default = 1,Multi = false,Text = 'HitBox',Tooltip = '[-] Enable one exact hitbox u like to shoot At', -- Information shown when you hover over the dropdown
+Callback = function(Value)
+    target_aim.Aiming.Target.TargetPart = Value
+end})
+
+Tab1:AddInput('MyTextbox', {Default = '[-] Type',Numeric = true, Finished = false,Text = 'Prediction',Tooltip = 'Exp.: 0.13 , 0.1500 , etc.', Placeholder = '[-] Type',
+    Callback = function(Value)
+        target_aim.Aiming.Target.Prediction = Value
+    end
+})
+
+Tab1:AddSlider('MySlider', {Text = 'Offset',Default = 0,Min = -4,Max = 4,Rounding = 1,Compact = false,
+Callback = function(Value)
+
+        target_aim.Aiming.Target.JumpOffset = Value
+    end
+})
+Tab1:AddDivider()
+
+
+Tab1:AddToggle('MyToggle', {Text = 'AntiGround',Default = false,Tooltip = '[-] Enable it by a Simple Click', 
+Callback = function(Value)
+    target_aim.Aiming.Target.AntiGroundShot = Value
+end})
+
+local MDResolver = false
+Tab1:AddToggle('MyToggle', {Text = 'Move Direction Resolver',Default = false,Tooltip = '[-] Enable it by a Simple Click', 
+Callback = function(Value)
+    MDResolver = Value
+end})
+
+Tab1:AddToggle('MyToggle', {Text = 'Look At',Default = false,Tooltip = '[-] Enable it by a Simple Click', 
+Callback = function(Value)
+    target_aim.Aiming.Target.LookAt = Value
+end})
+
+Tab1:AddToggle('MyToggle', {Text = 'VelocityRecalculation',Default = false,Tooltip = '[-] Enable it by a Simple Click', 
+Callback = function(Value)
+    Resolvers.Options.VelocityRecalculation = Value
+end})
+
+spawn(function()
+    if AZURE_TmKALRSX and target_aim.Aiming.Target.Enabled == true and Resolvers.Options.VelocityRecalculation == true then
+        local character = AZURE_TmKALRSX.Character
+        local humanoid = character and character:FindFirstChild("Humanoid")
+        local rootPart = character and character:FindFirstChild("HumanoidRootPart")
+
+        if humanoid and rootPart and humanoid:GetState() == Enum.HumanoidStateType.Physics and rootPart.AssemblyMass <= 0 then
+            local lastPosition = rootPart.Position
+            task.wait()
+            local currentPosition = rootPart.Position
+            local velocity = (currentPosition - lastPosition) * 65
+            lastPosition = currentPosition
+            rootPart.AssemblyLinearVelocity = velocity
+            rootPart.Velocity = velocity
+        end
+    end
+end)
+
+spawn(function()
+    runservice.RenderStepped:Connect(function()
+        if TargetAimEnabled and target_aim.Aiming.Target.Enabled and AZURE_TmKALRSX.Character:FindFirstChild("UpperTorso") then
+            if target_aim.Aiming.Target.LookAt then
+                player.Character.HumanoidRootPart.CFrame = CFrame.new(player.Character.HumanoidRootPart.CFrame.Position, Vector3.new(AZURE_TmKALRSX.Character.HumanoidRootPart.CFrame.X, player.Character.HumanoidRootPart.CFrame.Position.Y, AZURE_TmKALRSX.Character.HumanoidRootPart.CFrame.Z))
+                player.Character.Humanoid.AutoRotate = false
+                spawn(function ()
+                    if target_aim.Aiming.Target.LookAt == false then
+                        player.Character.Humanoid.AutoRotate = true
+                    end
+                end)
+            end
+        else
+            spawn(function()
+                player.Character.Humanoid.AutoRotate = true
+            end)
+        end
+    end)
+end)
+
+local JumpOffsetValue
+spawn(function()
+    if target_aim.Aiming.Target.AntiGroundShot == true and AZURE_TmKALRSX then
+        if AZURE_TmKALRSX.Character.Humanoid.Jump == true and AZURE_TmKALRSX.Character.Humanoid.FloorMaterial == Enum.Material.Air then
+            JumpOffsetValue = target_aim.Aiming.Target.JumpOffset
+        else
+            JumpOffsetValue = -0
+        end
+    end
+end)
+
+
+-- || Mouse Hit Index || --
+Rawtable.__index = function(self, Index)
+    if not checkcaller() and self == mouse and target_aim.Aiming.Target.TargetPart then
+        if AZURE_TmKALRSX and AZURE_TmKALRSX.Character then
+            if MDResolver then
+                Position = AZURE_TmKALRSX.Character[target_aim.Aiming.Target.TargetPart].Position+(Vector3.new(AZURE_TmKALRSX.Character.Humanoid.MoveDirection.X,JumpOffsetValue,AZURE_TmKALRSX.Character.Humanoid.MoveDirection.Z)*target_aim.Aiming.Target.Prediction*18)
+            else
+                Position = AZURE_TmKALRSX.Character[target_aim.Aiming.Target.TargetPart].Position+Vector3.new(0.01,JumpOffsetValue,0.01)+(AZURE_TmKALRSX.Character[target_aim.Aiming.Target.TargetPart].Velocity*target_aim.Aiming.Target.Prediction)
+            end
+            if Index == 'Hit' then
+                return CFrame.new(Position)
+            end
+        end
+    end
+    return Indexx(self, Index)
+end
+
+function targetchosen()
+    local distance = math.huge
+    local zclosest
+    local LocalPlayer = game.Players.LocalPlayer
+    for i, v in pairs(game.Players:GetPlayers()) do
+        if v ~= LocalPlayer and v.Character and v.Character:FindFirstChild("Humanoid") and v.Character.Humanoid.Health ~= 0 and v.Character:FindFirstChild("HumanoidRootPart") then
+            local pos = workspace.CurrentCamera:WorldToViewportPoint(v.Character.PrimaryPart.Position)
+            local magnitude = (Vector2.new(pos.X, pos.Y) - Vector2.new(LocalPlayer:GetMouse().X, LocalPlayer:GetMouse().Y)).magnitude
+            if magnitude < distance then
+                zclosest = v
+                distance = magnitude
+            end
+        end
+    end
+    return zclosest
+end
+
+--[[visuals section
+yehaaaaa
+]]
+local ChamsSettings = {
+    Enabled = false,
+    Material = Enum.Material.SmoothPlastic,
+    Color = Color3.new(1, 1, 1),
+    Duration = 1,
+    TransparencyStep = 0,
+}
+local ChamsThread
+local CurrentClone
+
+local function ApplyChams()
+    while ChamsSettings.Enabled do
+        wait()
+
+        local localPlayer = game.Players.LocalPlayer
+        local character = localPlayer.Character
+
+        if character then
+            character.Archivable = true
+            local clone = character:Clone()
+
+            for _, obj in pairs(clone:GetDescendants()) do
+                if obj:IsA("BasePart") then
+                    if obj.Transparency == 1 then
+                        obj:Destroy()
+                    else
+                        obj.CanCollide = false
+                        obj.Anchored = true
+                        obj.Material = ChamsSettings.Material
+                        obj.Color = ChamsSettings.Color
+                        obj.Transparency = 1
+                        obj.Size = obj.Size + Vector3.new(0.03, 0.03, 0.03)
+                    end
+                elseif obj:IsA("HumanoidRootPart") or obj:IsA("Humanoid")
+                    or obj:IsA("LocalScript") or obj:IsA("Script") or obj:IsA("Decal") then
+                    obj:Destroy()
+                end
+
+                pcall(function()
+                    obj.CanCollide = false
+                end)
+            end
+
+            clone.Parent = game.Workspace
+
+            local endTime = tick() + ChamsSettings.Duration
+            while tick() < endTime do
+                local timeRemaining = endTime - tick()
+                local transparency = 1 - (timeRemaining / ChamsSettings.Duration)
+
+                for _, obj in pairs(clone:GetDescendants()) do
+                    if obj:IsA("BasePart") then
+                        obj.Transparency = transparency
+                    end
+                end
+
+                wait()
+            end
+
+            clone:Destroy()
+        end
+    end
+end
+
+local function ToggleChams()
+    ChamsSettings.Enabled = not ChamsSettings.Enabled
+
+    if ChamsSettings.Enabled then
+        ChamsThread = task.spawn(ApplyChams)
+    elseif ChamsThread then
+        ChamsThread:Cancel()
+        if CurrentClone then
+            CurrentClone:Destroy()
+        end
+    end
+end
+
+local HighlightSettings = {
+    Enabled = false,
+    Color = Color3.new(1, 1, 1),
+    EnableFade = false,
+    DurationFade = 1,
+}
+
+
+local TabBox = Tabs.Rage:AddRightTabbox()
+local Tab1 = TabBox:AddTab('[+] Some Visuals Retard')
+Tab1:AddToggle('MyToggle', {
+    Text = 'Enable Clone Cham',
+    Default = true,
+    Tooltip = '[-] Enable it by a Simple Click',
+    Callback = function(Value)
+        ChamsSettings.Enabled = Value
+        ToggleChams()
+    end
+})
+
+Tab1:AddDropdown('MyDropdown', {Values = { 'ForceField', 'Neon', 'SmoothPlastic' },Default = 1,Multi = false,Text = 'Material',Tooltip = '[-] Enable one exact Material u like to use',
+Callback = function(Value)
+    ChamsSettings.Material = Value
+end})
+
+
+Tab1:AddSlider('MySlider', {Text = 'Duration',Default = 1,Min = 0.1,Max = 5,Rounding = 1,Compact = false,
+Callback = function(Value)
+        ChamsSettings.Duration = Value
+    end
+})
+
+Tab1:AddSlider('MySlider', {Text = 'TransparencyStep',Default = 33,Min = 0.1,Max = 50,Rounding = 1,Compact = false,
+Callback = function(Value)
+        ChamsSettings.TransparencyStep = Value
+    end
+})
+
+Tab1:AddLabel('Cham Clone Color' ):AddColorPicker('ColorPicker', {Default = Color3.new(1, 1, 1),Title = 'Cham',Transparency = 0, 
+Callback = function(Value)
+    ChamsSettings.Color = Value
+end})
+
+Tab1:AddDivider()
+
+Tab1:AddToggle('MyToggle', {
+    Text = 'Enable RobloxStudio Selection',
+    Default = false,
+    Tooltip = '[-] Enable it by a Simple Click',
+    Callback = function(Value)
+
+local function highlightCharacter(character)
+    local highlight = Instance.new("SelectionBox")
+    highlight.Adornee = character
+    highlight.Parent = game.Workspace.CurrentCamera
+    return highlight
+end
+
+
+local function toggleHighlight()
+    local localPlayer = game.Players.LocalPlayer
+    if localPlayer and localPlayer.Character then
+        local highlight = getgenv().highlightInstance
+        if not highlight then
+            highlight = highlightCharacter(localPlayer.Character)
+            getgenv().highlightInstance = highlight
+        else
+            highlight:Destroy()
+            getgenv().highlightInstance = nil
+        end
+    end
+end
+
+toggleHighlight(Value)
+
+    end
+})
+
+
+local TabBox = Tabs.Rage:AddRightTabbox()
+local Tab1 = TabBox:AddTab('If u miss doesnt mean azure is ass')
+local TabBox = Tabs.Rage:AddRightTabbox()
+local Tab1 = TabBox:AddTab('UR JUST ASS FUCKING FAG')
+
+Library:OnUnload(function()
+WatermarkConnection:Disconnect(true)
+Library.Unloaded = true end)
+local MenuGroup = Tabs['UI Settings']:AddLeftGroupbox('Menu')
+MenuGroup:AddButton('Unload', function() Library:Unload() end)
+MenuGroup:AddLabel('Menu bind'):AddKeyPicker('MenuKeybind', { Default = 'End', NoUI = true, Text = 'Menu keybind' })
+Library.ToggleKeybind = Options.MenuKeybind
+ThemeManager:SetLibrary(Library)
+SaveManager:SetLibrary(Library)
+SaveManager:IgnoreThemeSettings()
+SaveManager:SetIgnoreIndexes({ 'MenuKeybind' })
+ThemeManager:SetFolder('MyScriptHub')
+SaveManager:SetFolder('MyScriptHub/specific-game')
+SaveManager:BuildConfigSection(Tabs['UI Settings'])
+ThemeManager:ApplyToTab(Tabs['UI Settings'])
+SaveManager:LoadAutoloadConfig()
